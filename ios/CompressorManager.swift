@@ -119,8 +119,10 @@ class Compressor: RCTEventEmitter {
         // Check if HEVC hardware encoder is available
         // iOS 11+ and A9 chip or later support HEVC hardware encoding
         if #available(iOS 11.0, *) {
-            let session = AVAssetExportSession(asset: AVAsset(), presetName: AVAssetExportPresetHEVCHighestQuality)
-            resolve(session != nil)
+            // Check if HEVC preset is available in export presets
+            let allPresets = AVAssetExportSession.allExportPresets()
+            let supportsHEVC = allPresets.contains(AVAssetExportPresetHEVCHighestQuality)
+            resolve(supportsHEVC)
         } else {
             resolve(false)
         }
