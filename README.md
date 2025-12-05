@@ -70,6 +70,7 @@ We should use **react-native-compressor** instead of **FFmpeg** because **react-
   - [Video](#video)
     - [Automatic Video Compression Like Whatsapp](#automatic-video-compression-like-whatsapp)
     - [Manual Video Compression](#manual-video-compression)
+    - [HEVC/H.265 Video Compression](#hevch265-video-compression)
     - [Cancel Video Compression](#cancel-video-compression)
     - [Video Api Docs](#video-1)
   - [Audio](#audio)
@@ -243,6 +244,51 @@ const result = await Video.compress(
   }
 );
 ```
+
+##### HEVC/H.265 Video Compression
+
+This fork adds support for HEVC (H.265) video codec, which provides better compression efficiency (typically 25-50% smaller files at the same quality compared to H.264).
+
+```js
+import { Video } from 'react-native-compressor';
+
+// Check if device supports HEVC hardware encoding
+const isHEVCSupported = await Video.isHEVCEncoderSupported();
+console.log('HEVC supported:', isHEVCSupported);
+
+// Compress with HEVC codec explicitly
+const result = await Video.compress(
+  'file://path_of_file/BigBuckBunny.mp4',
+  {
+    compressionMethod: 'manual',
+    maxSize: 1280,
+    bitrate: 3000000,
+    videoCodec: 'hevc', // Use H.265/HEVC codec
+  },
+  (progress) => {
+    console.log('Compression Progress: ', progress);
+  }
+);
+
+// OR use getOptimalCodec() to automatically select the best codec
+const optimalCodec = await Video.getOptimalCodec();
+const result = await Video.compress(
+  'file://path_of_file/BigBuckBunny.mp4',
+  {
+    compressionMethod: 'manual',
+    maxSize: 1280,
+    bitrate: 3000000,
+    videoCodec: optimalCodec, // 'hevc' if supported, otherwise 'h264'
+  },
+  (progress) => {
+    console.log('Compression Progress: ', progress);
+  }
+);
+```
+
+**Note:** HEVC hardware encoding requires:
+- iOS 11+ with A9 chip or later (iPhone 6s and newer)
+- Android 5.0+ with hardware HEVC encoder support (varies by device)
 
 ##### Cancel Video Compression
 
@@ -459,6 +505,12 @@ await clearCache(); // this will clear cache of thumbnails cache directory
 - ###### `getCancellationId: function`
   `getCancellationId` is a callback function that gives us compress video id, which can be used in `Video.cancelCompression` method to cancel the compression
 
+- ###### `isHEVCEncoderSupported(): Promise<boolean>`
+  Check if the device supports hardware HEVC/H.265 encoding. Returns `true` if HEVC hardware encoding is available, `false` otherwise.
+
+- ###### `getOptimalCodec(): Promise<'hevc' | 'h264'>`
+  Get the optimal video codec for compression based on hardware support. Returns `'hevc'` if hardware HEVC encoding is supported, otherwise returns `'h264'`. Use this to automatically select the best codec for the device.
+
 ### videoCompresssionType
 
 - ###### `compressionMethod: compressionMethod` (default: "manual")
@@ -484,6 +536,14 @@ await clearCache(); // this will clear cache of thumbnails cache directory
 - ###### `minimumFileSizeForCompress: number` (default: 0)
 
   previously default was 16 but now it is 0 by default. 0 mean 0mb. This is an offset, which you can set for minimumFileSizeForCompress will allow this package to dont compress less than or equal to `minimumFileSizeForCompress` ref [#26](https://github.com/numandev1/react-native-compressor/issues/26)
+
+- ###### `videoCodec: 'h264' | 'hevc'` (default: 'h264')
+
+  The video codec to use for compression:
+  - `'h264'` - H.264/AVC codec (default, widely compatible with all devices and players)
+  - `'hevc'` - H.265/HEVC codec (better compression, ~25-50% smaller files at same quality)
+
+  Use `Video.isHEVCEncoderSupported()` to check hardware support, or `Video.getOptimalCodec()` to automatically select the best codec for the device.
 
 **if you wanna get video metadata then [read this](#get-metadata-of-video)**
 

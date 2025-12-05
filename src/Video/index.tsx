@@ -4,6 +4,7 @@ import { Compressor } from '../Main';
 import { uuidv4 } from '../utils';
 
 export type compressionMethod = 'auto' | 'manual';
+export type videoCodec = 'h264' | 'hevc';
 type videoCompresssionType = {
   bitrate?: number;
   maxSize?: number;
@@ -15,6 +16,12 @@ type videoCompresssionType = {
    * Default:0, we uses it when we use downloadProgress/onProgress
    */
   progressDivider?: number;
+  /***
+   * Video codec to use for compression.
+   * 'h264' - H.264/AVC codec (default, widely compatible)
+   * 'hevc' - H.265/HEVC codec (better compression, iOS 11+/Android 5+)
+   */
+  videoCodec?: videoCodec;
 };
 
 export type VideoCompressorType = {
@@ -26,6 +33,17 @@ export type VideoCompressorType = {
   cancelCompression(cancellationId: string): void;
   activateBackgroundTask(onExpired?: (data: any) => void): Promise<any>;
   deactivateBackgroundTask(): Promise<any>;
+  /**
+   * Check if the device supports hardware HEVC/H.265 encoding.
+   * @returns Promise<boolean> - true if HEVC hardware encoding is supported
+   */
+  isHEVCEncoderSupported(): Promise<boolean>;
+  /**
+   * Get the optimal video codec for compression based on hardware support.
+   * Returns 'hevc' if hardware HEVC encoding is supported, otherwise 'h264'.
+   * @returns Promise<videoCodec> - 'hevc' or 'h264'
+   */
+  getOptimalCodec(): Promise<videoCodec>;
 };
 
 const VideoCompressEventEmitter = new NativeEventEmitter(Compressor);
@@ -78,6 +96,7 @@ const Video: VideoCompressorType = {
         maxSize?: number;
         minimumFileSizeForCompress?: number;
         progressDivider?: number;
+        videoCodec?: videoCodec;
       } = { uuid };
       if (options?.progressDivider)
         modifiedOptions.progressDivider = options?.progressDivider;
@@ -98,6 +117,9 @@ const Video: VideoCompressorType = {
       }
       if (options?.getCancellationId) {
         options?.getCancellationId(uuid);
+      }
+      if (options?.videoCodec) {
+        modifiedOptions.videoCodec = options?.videoCodec;
       }
 
       const result = await NativeVideoCompressor.compress(
@@ -135,6 +157,18 @@ const Video: VideoCompressorType = {
   deactivateBackgroundTask() {
     VideoCompressEventEmitter.removeAllListeners('backgroundTaskExpired');
     return NativeVideoCompressor.deactivateBackgroundTask({});
+  },
+  async isHEVCEncoderSupported(): Promise<boolean> {
+    try {
+      return await NativeVideoCompressor.isHEVCEncoderSupported();
+    } catch (error) {
+      // If the native method is not available, assume HEVC is not supported
+      return false;
+    }
+  },
+  async getOptimalCodec(): Promise<videoCodec> {
+    const isHEVCSupported = await Video.isHEVCEncoderSupported();
+    return isHEVCSupported ? 'hevc' : 'h264';
   },
 } as VideoCompressorType;
 

@@ -70,6 +70,9 @@ RCT_EXTERN_METHOD(clearCache:(NSString *)cacheDir
 
 RCT_EXTERN_METHOD(cancelCompression:(NSString *)uuid)
 
+RCT_EXTERN_METHOD(isHEVCEncoderSupported:(RCTPromiseResolveBlock)resolve
+                 withRejecter:(RCTPromiseRejectBlock)reject)
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Photos
 import MobileCoreServices
+import VideoToolbox
 
 struct CompressionError: Error {
   private let message: String
@@ -170,6 +171,7 @@ class VideoCompressor {
         let maxSize:Float = options["maxSize"] as! Float;
         let uuid:String = options["uuid"] as! String
         let progressDivider=options["progressDivider"] as? Int ?? 0
+        let videoCodec:String = options["videoCodec"] as? String ?? "h264"
 
         let asset = AVAsset(url: url)
         guard asset.tracks.count >= 1 else {
@@ -194,7 +196,7 @@ class VideoCompressor {
             height: Int(resultHeight), width: Int(resultWidth)
             );
 
-        exportVideoHelper(url: url, asset: asset, bitRate: videoBitRate, resultWidth: resultWidth, resultHeight: resultHeight,uuid: uuid,progressDivider: progressDivider) { progress in
+        exportVideoHelper(url: url, asset: asset, bitRate: videoBitRate, resultWidth: resultWidth, resultHeight: resultHeight,uuid: uuid,progressDivider: progressDivider, videoCodec: videoCodec) { progress in
             onProgress(progress)
         } onCompletion: { outputURL in
             onCompletion(outputURL)
@@ -207,6 +209,7 @@ class VideoCompressor {
         let uuid:String = options["uuid"] as! String
         var bitRate = (options["bitrate"] as? NSNumber)?.floatValue;
         let progressDivider=options["progressDivider"] as? Int ?? 0
+        let videoCodec:String = options["videoCodec"] as? String ?? "h264"
         let asset = AVAsset(url: url)
         guard asset.tracks.count >= 1 else {
           let error = CompressionError(message: "Invalid video URL, no track found")
@@ -234,7 +237,7 @@ class VideoCompressor {
 
         let videoBitRate = bitRate ?? height*width*1.5
 
-        exportVideoHelper(url: url, asset: asset, bitRate: Int(videoBitRate), resultWidth: width, resultHeight: height,uuid: uuid,progressDivider: progressDivider) { progress in
+        exportVideoHelper(url: url, asset: asset, bitRate: Int(videoBitRate), resultWidth: width, resultHeight: height,uuid: uuid,progressDivider: progressDivider, videoCodec: videoCodec) { progress in
             onProgress(progress)
         } onCompletion: { outputURL in
             onCompletion(outputURL)
@@ -243,7 +246,7 @@ class VideoCompressor {
         }
       }
 
-    func exportVideoHelper(url: URL,asset: AVAsset, bitRate: Int,resultWidth:Float,resultHeight:Float,uuid:String,progressDivider: Int, onProgress: @escaping (Float) -> Void,  onCompletion: @escaping (URL) -> Void, onFailure: @escaping (Error) -> Void){
+    func exportVideoHelper(url: URL,asset: AVAsset, bitRate: Int,resultWidth:Float,resultHeight:Float,uuid:String,progressDivider: Int, videoCodec: String = "h264", onProgress: @escaping (Float) -> Void,  onCompletion: @escaping (URL) -> Void, onFailure: @escaping (Error) -> Void){
         var currentVideoCompression:Int=0
 
         var tmpURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
@@ -255,13 +258,23 @@ class VideoCompressor {
         exporter.outputURL = tmpURL
         exporter.outputFileType = AVFileType.mp4
 
-        let compressionDict: [String: Any] = [
+        // Determine codec type and profile based on videoCodec parameter
+        let codecType: AVVideoCodecType
+        var compressionDict: [String: Any] = [
           AVVideoAverageBitRateKey: bitRate,
-          AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
         ]
+
+        if videoCodec == "hevc" {
+            codecType = AVVideoCodecType.hevc
+            compressionDict[AVVideoProfileLevelKey] = kVTProfileLevel_HEVC_Main_AutoLevel
+        } else {
+            codecType = AVVideoCodecType.h264
+            compressionDict[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel
+        }
+
         exporter.optimizeForNetworkUse = true;
         exporter.videoOutputConfiguration = [
-          AVVideoCodecKey: AVVideoCodecType.h264,
+          AVVideoCodecKey: codecType,
           AVVideoWidthKey:  resultWidth,
           AVVideoHeightKey:  resultHeight,
           AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill,

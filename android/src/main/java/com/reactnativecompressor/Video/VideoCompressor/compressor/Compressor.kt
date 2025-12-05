@@ -32,7 +32,12 @@ object Compressor {
   private const val MIN_BITRATE = 2000000
 
   // MIME type for H.264 Advanced Video Coding
-  private const val MIME_TYPE = "video/avc"
+  private const val MIME_TYPE_H264 = "video/avc"
+  // MIME type for H.265/HEVC
+  private const val MIME_TYPE_HEVC = "video/hevc"
+
+  // Current MIME type (set dynamically based on videoCodec parameter)
+  private var currentMimeType = MIME_TYPE_H264
 
   // Default timeout for MediaCodec operations
   private const val MEDIACODEC_TIMEOUT_DEFAULT = 100L
@@ -54,8 +59,12 @@ object Compressor {
     outputWidth: Int,
     outputHeight: Int,
     outputBitrate: Int,
+    videoCodec: String = "h264",
     listener: CompressionProgressListener,
   ): Result = withContext(Dispatchers.Default) {
+
+    // Set MIME type based on videoCodec parameter
+    currentMimeType = if (videoCodec == "hevc") MIME_TYPE_HEVC else MIME_TYPE_H264
 
     // Initialize MediaExtractor and MediaMetadataRetriever
     val extractor = MediaExtractor()
@@ -171,7 +180,7 @@ object Compressor {
         val inputFormat = extractor.getTrackFormat(videoIndex)
 
         val outputFormat: MediaFormat =
-          MediaFormat.createVideoFormat(MIME_TYPE, newWidth, newHeight)
+          MediaFormat.createVideoFormat(currentMimeType, newWidth, newHeight)
 
         // Set output format
         setOutputFileParameters(
@@ -503,10 +512,11 @@ object Compressor {
         // Log.i("encoderName", encoder.name)
         // c2.qti.avc.encoder results in a corrupted .mp4 video that does not play in
         // Mac and iphones
-        val encoder = if (hasQTI) {
+        val encoder = if (hasQTI && currentMimeType == MIME_TYPE_H264) {
+            // Only use QTI encoder for H.264
             MediaCodec.createByCodecName("c2.android.avc.encoder")
         } else {
-            MediaCodec.createEncoderByType(MIME_TYPE)
+            MediaCodec.createEncoderByType(currentMimeType)
         }
         encoder.configure(
             outputFormat, null, null,

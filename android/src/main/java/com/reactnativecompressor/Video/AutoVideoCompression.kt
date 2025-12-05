@@ -33,7 +33,8 @@ object AutoVideoCompression {
                   bitrate,
                   resultHeight, resultWidth
                 ).toFloat()
-                compressVideo(srcPath!!, destinationPath, resultWidth, resultHeight, videoBitRate, options.uuid!!,options.progressDivider!!, promise, reactContext)
+                val codecStr = options.videoCodec.name
+                compressVideo(srcPath!!, destinationPath, resultWidth, resultHeight, videoBitRate, options.uuid!!,options.progressDivider!!, promise, reactContext, codecStr)
             } else {
                 promise.resolve(fileUrl)
             }

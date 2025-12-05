@@ -113,5 +113,17 @@ class Compressor: RCTEventEmitter {
     func clearCache(cacheDir: String, resolve:@escaping RCTPromiseResolveBlock, reject:@escaping RCTPromiseRejectBlock) -> Void {
         CreateVideoThumbnail.cleanCacheDir(cacheDir: cacheDir,resolve: resolve,rejecter: reject)
     }
-      
+
+    @objc(isHEVCEncoderSupported:withRejecter:)
+    func isHEVCEncoderSupported(resolve:@escaping RCTPromiseResolveBlock, reject:@escaping RCTPromiseRejectBlock) -> Void {
+        // Check if HEVC hardware encoder is available
+        // iOS 11+ and A9 chip or later support HEVC hardware encoding
+        if #available(iOS 11.0, *) {
+            let session = AVAssetExportSession(asset: AVAsset(), presetName: AVAssetExportPresetHEVCHighestQuality)
+            resolve(session != nil)
+        } else {
+            resolve(false)
+        }
+    }
+
 }

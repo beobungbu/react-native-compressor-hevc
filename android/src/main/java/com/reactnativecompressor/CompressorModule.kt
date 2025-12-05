@@ -1,5 +1,7 @@
 package com.reactnativecompressor
 
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.facebook.react.bridge.Promise
@@ -176,5 +178,33 @@ class CompressorModule(private val reactContext: ReactApplicationContext) : Comp
 
     @ReactMethod
     override fun removeListeners(count: Double) {
+    }
+
+    @ReactMethod
+    fun isHEVCEncoderSupported(promise: Promise) {
+        try {
+            // Check if HEVC hardware encoder is available
+            // Android 5.0+ (API 21+) may support HEVC, but hardware support varies
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+                val codecInfos = codecList.codecInfos
+
+                for (codecInfo in codecInfos) {
+                    if (codecInfo.isEncoder) {
+                        val types = codecInfo.supportedTypes
+                        for (type in types) {
+                            if (type.equals("video/hevc", ignoreCase = true)) {
+                                // Found an HEVC encoder
+                                promise.resolve(true)
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+            promise.resolve(false)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
     }
 }
