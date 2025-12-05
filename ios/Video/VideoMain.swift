@@ -317,6 +317,42 @@ class VideoCompressor {
         return tracks[0];
         }
 
+    // Convert FourCC code to string
+    func fourCCToString(_ code: FourCharCode) -> String {
+        let bytes: [CChar] = [
+            CChar((code >> 24) & 0xff),
+            CChar((code >> 16) & 0xff),
+            CChar((code >> 8) & 0xff),
+            CChar(code & 0xff),
+            0
+        ]
+        return String(cString: bytes)
+    }
+
+    // Get human-readable codec name from FourCC
+    func getCodecName(_ code: FourCharCode) -> String {
+        switch code {
+        case kCMVideoCodecType_HEVC, kCMVideoCodecType_HEVCWithAlpha:
+            return "HEVC"
+        case kCMVideoCodecType_H264:
+            return "H.264"
+        case kCMVideoCodecType_MPEG4Video:
+            return "MPEG-4"
+        case kCMVideoCodecType_AppleProRes4444:
+            return "ProRes 4444"
+        case kCMVideoCodecType_AppleProRes422:
+            return "ProRes 422"
+        case kCMVideoCodecType_AppleProRes422HQ:
+            return "ProRes 422 HQ"
+        case kCMVideoCodecType_AppleProRes422LT:
+            return "ProRes 422 LT"
+        case kCMVideoCodecType_AppleProRes422Proxy:
+            return "ProRes 422 Proxy"
+        default:
+            return fourCCToString(code)
+        }
+    }
+
 
 
     func getVideoMetaData(_ filePath: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
@@ -352,6 +388,19 @@ class VideoCompressor {
                             result["extension"] = _extension
                             result["size"] = fileSizeString
                             result["duration"] = seconds
+
+                            // Get video codec from format descriptions
+                            if let formatDescriptions = avAsset.formatDescriptions as? [CMFormatDescription],
+                               let formatDescription = formatDescriptions.first {
+                                let mediaSubType = CMFormatDescriptionGetMediaSubType(formatDescription)
+                                let codecFourCC = self.fourCCToString(mediaSubType)
+                                let codecName = self.getCodecName(mediaSubType)
+                                result["codec"] = codecName
+                                result["codecFourCC"] = codecFourCC
+                            }
+
+                            // Get bitrate
+                            result["bitrate"] = avAsset.estimatedDataRate
 
                             var commonMetadata: [AVMetadataItem] = []
                             for key in self.metadatas {

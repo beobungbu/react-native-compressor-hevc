@@ -41,6 +41,10 @@ type getVideoMetaDataType = (filePath: string) => Promise<{
     duration: number;
     width: number;
     height: number;
+    codec?: string;
+    codecFourCC?: string;
+    mimeType?: string;
+    bitrate?: number;
 }>;
 type getRealPathType = (path: string, type: 'video' | 'image') => Promise<string>;
 export declare const generateFilePath: any;

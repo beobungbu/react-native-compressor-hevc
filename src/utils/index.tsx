@@ -56,6 +56,10 @@ type getVideoMetaDataType = (filePath: string) => Promise<{
   duration: number;
   width: number;
   height: number;
+  codec?: string;
+  codecFourCC?: string; // iOS only (e.g., 'avc1', 'hvc1')
+  mimeType?: string; // Android only (e.g., 'video/avc', 'video/hevc')
+  bitrate?: number;
 }>;
 type getRealPathType = (
   path: string,

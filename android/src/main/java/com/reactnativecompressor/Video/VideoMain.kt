@@ -1,5 +1,7 @@
 package com.reactnativecompressor.Video
 
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
@@ -78,9 +80,46 @@ class VideoMain(private val reactContext: ReactApplicationContext) {
       params.putDouble("duration", duration / 1000)
       params.putString("extension", extension)
       params.putString("creationTime", creationTime.toString())
+
+      // Get video codec and bitrate using MediaExtractor
+      try {
+        val extractor = MediaExtractor()
+        extractor.setDataSource(srcPath!!)
+        for (i in 0 until extractor.trackCount) {
+          val format = extractor.getTrackFormat(i)
+          val mime = format.getString(MediaFormat.KEY_MIME)
+          if (mime?.startsWith("video/") == true) {
+            val codecName = getCodecName(mime)
+            params.putString("codec", codecName)
+            params.putString("mimeType", mime)
+            if (format.containsKey(MediaFormat.KEY_BIT_RATE)) {
+              params.putInt("bitrate", format.getInteger(MediaFormat.KEY_BIT_RATE))
+            }
+            break
+          }
+        }
+        extractor.release()
+      } catch (e: Exception) {
+        Log.w("VideoMain", "Could not extract codec info: ${e.message}")
+      }
+
+      metaRetriever.release()
       promise.resolve(params)
     } catch (e: Exception) {
       promise.reject(e)
+    }
+  }
+
+  private fun getCodecName(mimeType: String): String {
+    return when (mimeType) {
+      "video/hevc", "video/dolby-vision" -> "HEVC"
+      "video/avc" -> "H.264"
+      "video/mp4v-es" -> "MPEG-4"
+      "video/3gpp" -> "H.263"
+      "video/x-vnd.on2.vp8" -> "VP8"
+      "video/x-vnd.on2.vp9" -> "VP9"
+      "video/av01" -> "AV1"
+      else -> mimeType.removePrefix("video/").uppercase()
     }
   }
 }
