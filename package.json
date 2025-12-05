@@ -32,7 +32,6 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "build": "bob build || tsc --declaration --emitDeclarationOnly --outDir lib/typescript -p tsconfig.build.json",
-    "prepare": "yarn build",
     "prepack": "bob build",
     "release": "release-it",
     "example": "yarn --cwd example",
